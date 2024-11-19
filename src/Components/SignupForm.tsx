@@ -3,6 +3,8 @@ import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { auth } from "../firebase";
 import logo from "../assets/logo.png";
+import { AuthContext } from "../App";
+import left from "../assets/2.png";
 
 interface LocationState {
   phoneNumber: string;
@@ -18,6 +20,7 @@ const SignupForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const db = getFirestore();
+  const { currentUser } = React.useContext(AuthContext);
 
   const validateForm = () => {
     if (!firstName.trim()) return "First name is required";
@@ -32,7 +35,7 @@ const SignupForm = () => {
     return state && state.phoneNumber && state.uid;
   };
 
-  if (!isValidState(location.state)) {
+  if (!isValidState(location.state) || !currentUser) {
     return <Navigate to="/login" replace />;
   }
 
@@ -51,12 +54,8 @@ const SignupForm = () => {
     setLoading(true);
 
     try {
-      // Remove any special characters from phone number
       const formattedPhone = phoneNumber.replace(/\D/g, '');
-
-      // Create or update user document in Firestore
-      const userRef = doc(db, "users", formattedPhone);
-      await setDoc(userRef, {
+      const userData = {
         uid,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -64,11 +63,15 @@ const SignupForm = () => {
         phoneNumber: formattedPhone,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+      };
+
+      const userRef = doc(db, "users", formattedPhone);
+      await setDoc(userRef, userData);
+
+      navigate("/login", {
+        state: { fromSignup: true },
+        replace: true
       });
-
-      // Navigate to the home page after successful signup
-      navigate("/home", { replace: true });
-
     } catch (err) {
       console.error("Signup error:", err);
       setError("Failed to complete signup. Please try again.");
@@ -79,48 +82,82 @@ const SignupForm = () => {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl flex bg-white rounded-lg">
-        <div className="w-full lg:w-1/2 p-8">
-          <div className="mb-12">
-            <img src={logo} alt="logo" className="h-12" />
+      <div className="w-full max-w-6xl flex bg-white rounded-lg shadow-lg overflow-hidden">
+        {/* Left Image Section */}
+        <div className="hidden lg:block lg:w-1/2 flex items-center justify-center p-8">
+          <img
+            src={left}
+            alt="Security Illustration"
+            className="w-full h-full object-cover rounded-l-lg"
+          />
+        </div>
+
+        {/* Right Form Section */}
+        <div className="w-full lg:w-1/2 p-8 flex flex-col">
+          {/* Logo at top right */}
+          <div className="flex justify-end mb-8">
+            <img src={logo} alt="logo" className="h-10" />
           </div>
-          <div className="max-w-md">
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Complete Your Profile</h1>
-            <form onSubmit={handleSubmit} className="space-y-6">
+
+          <div className="flex-grow flex flex-col justify-center">
+            <h1 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
+              Complete Your Profile
+            </h1>
+            <form onSubmit={handleSubmit} className="space-y-6 max-w-md mx-auto w-full">
               <div className="space-y-4">
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="First Name"
-                  className="w-full px-4 py-3 border rounded"
-                />
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Last Name"
-                  className="w-full px-4 py-3 border rounded"
-                />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
-                  className="w-full px-4 py-3 border rounded"
-                />
+                <fieldset className="border rounded-lg border-gray-300">
+                  <legend className="text-sm px-2 ml-2">First Name</legend>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="John"
+                    className="w-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </fieldset>
+                <fieldset className="border rounded-lg border-gray-300">
+                  <legend className="text-sm px-2 ml-2">Last Name</legend>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Doe"
+                    className="w-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </fieldset>
+                <fieldset className="border rounded-lg border-gray-300">
+                  <legend className="text-sm px-2 ml-2">Email</legend>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="johndoe@gmail.com"
+                    className="w-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </fieldset>
               </div>
 
-              {error && <p className="text-red-500">{error}</p>}
+              {error && <p className="text-red-500 text-center">{error}</p>}
+              <label className="flex items-center">
+                <input type="checkbox" className="mr-2" />
+                I agree to the Terms and Privacy Policies
+              </label>
 
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-3 bg-blue-600 text-white rounded ${loading ? 'opacity-70' : ''}`}
+                className={`w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition ${loading ? 'opacity-70' : ''}`}
               >
-                {loading ? "Creating Account..." : "Complete Signup"}
+                {loading ? "Creating Account..." : "Create Account"}
               </button>
             </form>
+
+            <div className="flex items-center justify-between mt-4">
+              
+              <a href="/login" className="text-blue-600 hover:text-blue-700 text-center ">
+                Already have an account? Login
+              </a>
+            </div>
           </div>
         </div>
       </div>

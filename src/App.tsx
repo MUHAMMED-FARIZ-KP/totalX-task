@@ -6,7 +6,7 @@ import SignupForm from './Components/SignupForm';
 import Home from './Components/Home';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 // Define UserData interface
 interface UserData {
@@ -38,29 +38,34 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const db = getFirestore();
 
   React.useEffect(() => {
-    const checkUserExistence = async (phoneNumber: string) => {
+    const checkUserExistence = async (user: any) => {
       try {
-        const formattedPhone = phoneNumber.replace(/\D/g, '');
-        const userDocRef = doc(db, "users", formattedPhone);
+        const phoneNumber = user.phoneNumber?.replace(/\D/g, '') || 
+                             user.providerData[0]?.phoneNumber?.replace(/\D/g, '') || "";
+        
+        if (!phoneNumber) return false;
+
+        const userDocRef = doc(db, 'users', phoneNumber);
         const userDoc = await getDoc(userDocRef);
         return userDoc.exists();
       } catch (error) {
-        console.error("Error checking user existence:", error);
+        console.error('Error checking user existence:', error);
         return false;
       }
     };
 
-    // Listen to Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user?.phoneNumber) {
-        const exists = await checkUserExistence(user.phoneNumber);
+
+      if (user) {
+        const exists = await checkUserExistence(user);
         setUserExists(exists);
         setIsAuthenticated(true);
       } else {
-        setUserExists(null);
         setIsAuthenticated(false);
+        setUserExists(null);
       }
+
       setIsLoading(false);
     });
 
@@ -91,7 +96,7 @@ const AuthenticatedRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   // Allow access to signup if user doesn't exist yet
-  if (userExists === false && window.location.pathname !== "/signup") {
+  if (userExists === false && window.location.pathname !== '/signup') {
     return <Navigate to="/signup" replace />;
   }
 
@@ -135,7 +140,7 @@ const App: React.FC = () => {
 
           {/* Redirect to login for the root path */}
           <Route path="/" element={<Navigate to="/login" replace />} />
-          
+
           {/* Fallback route for any undefined routes */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

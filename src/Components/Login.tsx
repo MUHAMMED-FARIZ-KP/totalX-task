@@ -3,7 +3,7 @@ import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import logo from "../assets/logo.png";
 import right from "../assets/1.png";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -17,6 +17,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Add a state to track if automatic refresh is needed
+  const [shouldRefresh, setShouldRefresh] = useState(false);
 
   useEffect(() => {
     const cleanup = () => {
@@ -29,6 +33,20 @@ const Login = () => {
     cleanup();
     return cleanup;
   }, []);
+
+  // Check if we came from signup and need to refresh
+  useEffect(() => {
+    if (location.state?.fromSignup) {
+      setShouldRefresh(true);
+    }
+  }, [location.state]);
+
+  // Automatic refresh effect
+  useEffect(() => {
+    if (shouldRefresh) {
+      window.location.reload();
+    }
+  }, [shouldRefresh]);
 
   const generateRecaptcha = () => {
     try {
